@@ -1,9 +1,11 @@
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-from mongodb import test
+from mongodb import DB
 import os
 
 TOKEN = os.getenv('TG_API_KEY')
+
+db = DB('mongo')
  
 bot = telebot.TeleBot(TOKEN)
 def keyboard_gen():
