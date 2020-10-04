@@ -23,7 +23,9 @@ def gen_mark(mode = "", father = None, admin = True):
     else:
         butt = data.get_root_categories_id()
 
-    if not(father is None) :
+#    if not(father is None) :
+
+    if(father or not(current_id is None)):
         mark.row(InlineKeyboardButton("Назад", callback_data = father))
 
     for b in butt:
@@ -89,7 +91,7 @@ def get_desk(message):
     ch = data.add_category(name = text, description = desk, parent_id = current_id)
     current_id = ch
     strr = data.get_category_name(ch) + '\n' + data.get_category_description(ch)
-    bot.send_message(message.chat.id, strr, reply_markup=gen_mark(mode))
+    bot.send_message(message.chat.id, strr, reply_markup=gen_mark(ch))
     text = ""
 #    start_message(message)
  
