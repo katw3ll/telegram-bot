@@ -12,8 +12,8 @@ class DB:
     CATEGORIES_COLLECTION_NAME = "categories"
     PACKEGES_COLLECTION_NAME = "packeges"
 
-    def __init__(self, hostname='localhost', port=27017):
-        self.client = pymongo.MongoClient(hostname, port)
+    def __init__(self, hostname='176.119.157.152', port=27017):
+        self.client = pymongo.MongoClient(hostname, port, username='root', password='ffP4a42yMFkGrrTj')
         self.db = self.client[self.MAIN_DB_NAME]
         
         self.categories = self.db[self.CATEGORIES_COLLECTION_NAME]
@@ -22,32 +22,32 @@ class DB:
     # ФУНКЦИИ ДЛЯ РАБОТЫ С КАТЕГОРИЯМИ
 
     # Создание новой категории (необходимо передать <имя> и <описание>). Возвращает id новой категории    
-    def add_category(self, name, description, parent_id=None):
-        new_category = {"name": name, "description": description, "parent": parent_id, "children": [], "packeges": []}
+    def add_category(self, name, description, parent_id=None, is_category=True):
+        new_category = {"name": name, "description": description, "parent": parent_id, "children": [], "category": is_category}
         child_id = self.categories.insert_one(new_category).inserted_id
 
         if parent_id != None:
-            myquery = { "_id": parent_id}
-            children = [i for i in self.categories.find({"_id": parent_id})][0]['children']
-            children.append(child_id)
+            myquery = { "_id": ObjectId(parent_id)}
+            children = [i for i in self.categories.find({"_id": ObjectId(parent_id)})][0]['children']
+            children.append(str(child_id))
             newvalues = { "$set": { "children": children } }
             self.categories.update_one(myquery, newvalues)
         
-        return child_id
+        return str(child_id)
         
     # Обновить имя и описание категории (необходимо передать еще id категории)
     def update_category(self, new_name, new_description, _id):
-        category = [i for i in self.categories.find({"_id": _id})]
+        category = [i for i in self.categories.find({"_id": ObjectId(_id)})]
 
         if not(category):
             return 
         
         newvalues = { "$set": { "name": new_name, "description": new_description } }
-        self.categories.update_one({"_id": _id}, newvalues)
+        self.categories.update_one({"_id": ObjectId(_id)}, newvalues)
 
     # Получить имя категории по id
     def get_category_name(self, _id):
-        category = [i for i in self.categories.find({"_id": _id})]
+        category = [i for i in self.categories.find({"_id": ObjectId(_id)})]
 
         if not(category):
             return None
@@ -56,7 +56,7 @@ class DB:
 
     # Получить описание категории по id    
     def get_category_description(self, _id):
-        category = [i for i in self.categories.find({"_id": _id})]
+        category = [i for i in self.categories.find({"_id": ObjectId(_id)})]
 
         if not(category):
             return None
@@ -65,7 +65,7 @@ class DB:
     
     # Получить id детей категории по id    
     def get_children_category_id(self, _id):
-        category = [i for i in self.categories.find({"_id": _id})]
+        category = [i for i in self.categories.find({"_id": ObjectId(_id)})]
 
         if not(category):
             return None
@@ -74,7 +74,7 @@ class DB:
 
     # Получить родителя категории по id    
     def get_parent_category_id(self, _id):
-        category = [i for i in self.categories.find({"_id": _id})]
+        category = [i for i in self.categories.find({"_id": ObjectId(_id)})]
 
         if not(category):
             return None
@@ -83,75 +83,50 @@ class DB:
     
     # Удалить описание категорию по id    
     def delete_category(self, _id):
-        children = [i for i in self.categories.find({"parent": _id})]
+        children = [i for i in self.categories.find({"parent": ObjectId(_id)})]
 
         for x in children:
             for i in x['children']:
-                self.categories.delete_one({"_id": i})
+                self.categories.delete_one({"_id": ObjectId(i)})
             self.categories.delete_one({"_id": x['_id']})
 
-        self.categories.delete_one({"_id": _id})
+        self.categories.delete_one({"_id": ObjectId(_id)})
 
     # Получить массив id категорий первого уровня (root)   
     def get_root_categories_id(self):
         root = [i for i in self.categories.find({"parent": None})]
         res = []
         for item in root:
-            res.append(item['_id'])
+            res.append(str(item['_id']))
         return res
 
-
-    # ФУНКЦИИ ДЛЯ РАБОТЫ С ПАКЕТАМИ
-
-    # Получает все пакеты категории
-    def get_packedges_for_category(self, _id):
-        category = [i for i in self.categories.find({"_id": _id})]
-
+    # Проверить, является ли категорией (возвращает True/False)
+    def is_category(self, _id):
+        category = [i for i in self.categories.find({"_id": ObjectId(_id)})]
         if not(category):
-            return None
-        
-        return category[0]['packeges']
-    
-    # Обновляет все пакеты категории
-    def set_packedges_for_category(self, _id, packeges):
-        category = [i for i in self.categories.find({"_id": _id})]
-
-        if not(category):
-            return None
-        
-        newvalues = { "$set": {"packeges": packeges } }
-        self.categories.update_one({"_id": _id}, newvalues)
-
+            return None  
+        return category[0]['category']
    
     # DEBUG: Вывести все элементы
     def print(self):
-        print("================================")
+        print("\n================================")
         for x in self.categories.find():
             print(x) 
-        print("================================")
+        print("================================\n")
 
 
 
 if __name__ == '__main__':
     db = DB()
+
     # db.add_category('kek', "desck2")
-    # db.add_category('test1', "desck2", parent_id=ObjectId('5f779e64ec02c1e862dcb2dc'))
-    # db.delete_category(ObjectId('5f779e4a290e7b88332011c8'))
+    # db.add_category('kek_new', "desckasfsa2", parent_id='5f798786aa63f7881289667b')
+
     print(db.get_root_categories_id())
-    print(db.get_category_name(ObjectId('5f779e64ec02c1e862dcb2dc')))
-    print(db.get_category_description(ObjectId('5f779e64ec02c1e862dcb2dc')))
-    print(db.get_children_category_id(ObjectId('5f779e64ec02c1e862dcb2dc')))
-    print(db.get_parent_category_id(ObjectId('5f77a58236a225d294e8f8ca')))
-    print(db.get_packedges_for_category(ObjectId('5f77a58236a225d294e8f8ca')))
-
-    packeges = [
-        {"name": "Имя пакета", "description": "Описание пакета"},
-        {"name": "Имя пакета2", "description": "Описание пакета2"},
-    ]
-    db.set_packedges_for_category(ObjectId('5f77a58236a225d294e8f8ca'), packeges)
-
-    print(db.get_packedges_for_category(ObjectId('5f77a58236a225d294e8f8ca')))
-
+    print('\n========================================\n')
+    print(db.get_category_name('5f798786aa63f7881289667b'), type(db.get_category_name('5f798786aa63f7881289667b')))
+    print(db.get_category_description('5f798786aa63f7881289667b'), type(db.get_category_description('5f798786aa63f7881289667b')))
+    print(db.get_children_category_id('5f798786aa63f7881289667b'), type(db.get_children_category_id('5f798786aa63f7881289667b')))
 
     db.print()
     
