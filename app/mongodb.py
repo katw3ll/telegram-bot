@@ -44,6 +44,7 @@ class DB:
         
         newvalues = { "$set": { "name": new_name, "description": new_description } }
         self.categories.update_one({"_id": ObjectId(_id)}, newvalues)
+        return _id
 
     # Получить имя категории по id
     def get_category_name(self, _id):
@@ -82,15 +83,25 @@ class DB:
         return category[0]['parent']
     
     # Удалить описание категорию по id    
-    def delete_category(self, _id):
-        children = [i for i in self.categories.find({"parent": ObjectId(_id)})]
+    def delete_category(self, _id, del_from_parent=True):
+        current = [i for i in self.categories.find({"_id": ObjectId(_id)})]
 
-        for x in children:
-            for i in x['children']:
-                self.categories.delete_one({"_id": ObjectId(i)})
-            self.categories.delete_one({"_id": x['_id']})
+        if not(current):
+            return
+        children = current[0]['children']
+        parent_id = current[0]['parent']
 
+        for c in children:
+            self.delete_category(c, del_from_parent=False)
         self.categories.delete_one({"_id": ObjectId(_id)})
+        if del_from_parent and parent_id:
+            parent = [i for i in self.categories.find({"_id": ObjectId(parent_id)})][0]
+
+            parent_childrens = parent['children']
+            parent_childrens.remove(_id)
+            newvalues = { "$set": { "children": parent_childrens} }
+            self.categories.update_one({"_id": ObjectId(parent_id)}, newvalues)
+            
 
     # Получить массив id категорий первого уровня (root)   
     def get_root_categories_id(self):
@@ -119,14 +130,18 @@ class DB:
 if __name__ == '__main__':
     db = DB()
 
-    # db.add_category('kek', "desck2")
-    # db.add_category('kek_new', "desckasfsa2", parent_id='5f798786aa63f7881289667b')
+    # _id = db.add_category('newnew', "desck2", parent_id='5f79f8f59a585aac8b3a83ab')
+    # _id = db.add_category('kek_new', "desckasfsa2", parent_id=_id)
+    # db.add_category('kek_new', "desckasfsa2", parent_id=_id)
+    # db.delete_category('5f79f737f1161458c4abb646')
+    # db.delete_category('5f79f76df1161458c4abb658')
 
     print(db.get_root_categories_id())
-    print('\n========================================\n')
-    print(db.get_category_name('5f798786aa63f7881289667b'), type(db.get_category_name('5f798786aa63f7881289667b')))
-    print(db.get_category_description('5f798786aa63f7881289667b'), type(db.get_category_description('5f798786aa63f7881289667b')))
-    print(db.get_children_category_id('5f798786aa63f7881289667b'), type(db.get_children_category_id('5f798786aa63f7881289667b')))
+    db.delete_category("5f79f8f59a585aac8b3a83ac")
+    # print('\n========================================\n')
+    # print(db.get_category_name('5f798786aa63f7881289667b'), type(db.get_category_name('5f798786aa63f7881289667b')))
+    # print(db.get_category_description('5f798786aa63f7881289667b'), type(db.get_category_description('5f798786aa63f7881289667b')))
+    # print(db.get_children_category_id('5f798786aa63f7881289667b'), type(db.get_children_category_id('5f798786aa63f7881289667b')))
 
     db.print()
     
